@@ -21,7 +21,7 @@ public abstract class FluidPipeTypeMixin {
         
         boolean hasRetrieveMode = false;
         for (Direction side : Direction.values()) {
-            if (tileEntity.isExtracting(side) && retrieveMode.pipezretriever$isRetrieving(side)) {
+            if (tileEntity.isExtracting(side) && retrieveMode.isRetrieving(side)) {
                 hasRetrieveMode = true;
                 break;
             }

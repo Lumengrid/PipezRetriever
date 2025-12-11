@@ -24,8 +24,12 @@ build
 # other
 eclipse
 run
+/runs
 runs
 run-data
 
 repo
 
+/runs/
+/build/
+/.gradle/

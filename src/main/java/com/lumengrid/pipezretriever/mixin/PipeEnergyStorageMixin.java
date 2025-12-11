@@ -40,7 +40,7 @@ public abstract class PipeEnergyStorageMixin {
         
         // Only intercept if in retrieve mode
         PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 3 side {}", side);
-        if (!retrieveMode.pipezretriever$isRetrieving(side)) {
+        if (!retrieveMode.isRetrieving(side)) {
             PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 4 side {}", side);
             return; // Let original handle normal mode
         }

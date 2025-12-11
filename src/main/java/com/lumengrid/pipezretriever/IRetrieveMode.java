@@ -14,19 +14,13 @@ public interface IRetrieveMode {
      * @param side The direction to check
      * @return true if retrieve mode is enabled
      */
-    boolean pipezretriever$isRetrieving(Direction side);
-    
+    boolean isRetrieving(Direction side);
+
     /**
      * Set retrieve mode for the given side
      * @param side The direction to set
      * @param retrieving Whether to enable retrieve mode
      */
-    void pipezretriever$setRetrieving(Direction side, boolean retrieving);
-    
-    /**
-     * Get the retrieve mode array
-     * @return Array of retrieve mode states for each direction
-     */
-    boolean[] pipezretriever$getRetrievingSides();
+    void setRetrieving(Direction side, boolean retrieving);
 }
 

@@ -52,7 +52,7 @@ public class RetrieveHelper {
         if (be instanceof IRetrieveMode retrieveMode) {
             // Check if this pipe is extracting on the side facing us and is in retrieve mode
             if (be instanceof PipeTileEntity pipe) {
-                if (pipe.isExtracting(side) && retrieveMode.pipezretriever$isRetrieving(side)) {
+                if (pipe.isExtracting(side) && retrieveMode.isRetrieving(side)) {
                     return true;
                 }
             }
@@ -96,7 +96,7 @@ public class RetrieveHelper {
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             UpgradeTileEntity.Distribution distribution = tileEntity.getDistribution(side, pipeType);
             
-            if (retrieveMode.pipezretriever$isRetrieving(side)) {
+            if (retrieveMode.isRetrieving(side)) {
                 // RETRIEVE MODE: Pull FROM connections INTO the extracting handler
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     retrieveItemsRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);
@@ -316,7 +316,7 @@ public class RetrieveHelper {
             List<Filter<?, ?>> filters = tileEntity.getFilters(side, pipeType);
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             
-            if (retrieveMode.pipezretriever$isRetrieving(side)) {
+            if (retrieveMode.isRetrieving(side)) {
                 retrieveFluids(tileEntity, connections, extractingHandler, rate, filters, filterMode);
             } else {
                 insertFluids(tileEntity, connections, extractingHandler, rate, filters, filterMode);
@@ -793,7 +793,7 @@ public class RetrieveHelper {
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             UpgradeTileEntity.Distribution distribution = tileEntity.getDistribution(side, pipeType);
             
-            if (retrieveMode.pipezretriever$isRetrieving(side)) {
+            if (retrieveMode.isRetrieving(side)) {
                 // RETRIEVE MODE: Pull FROM connections INTO the extracting handler
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     retrieveGasRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);

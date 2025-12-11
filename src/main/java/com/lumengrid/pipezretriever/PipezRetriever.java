@@ -16,8 +16,6 @@ public class PipezRetriever {
 
     public PipezRetriever(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("Pipez Retriever initializing...");
-        
-        // Register network handlers
         modEventBus.addListener(this::registerPayloads);
     }
     

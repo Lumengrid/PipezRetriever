@@ -17,7 +17,7 @@ public abstract class UpgradeTileEntityMixin {
     @Inject(method = "setExtracting", at = @At("HEAD"), remap = false)
     private void pipezretriever$onSetExtracting(Direction side, boolean extracting, CallbackInfo ci) {
         if (!extracting && this instanceof IRetrieveMode retrieveMode) {
-            retrieveMode.pipezretriever$setRetrieving(side, false);
+            retrieveMode.setRetrieving(side, false);
         }
     }
 }

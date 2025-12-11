@@ -1,7 +1,7 @@
 package com.lumengrid.pipezretriever.mixin;
 
 import com.lumengrid.pipezretriever.IRetrieveMode;
-import com.lumengrid.pipezretriever.PipezRetriever;
+import com.lumengrid.pipezretriever.IRetrieveShouldWork;
 import com.lumengrid.pipezretriever.RetrieveHelper;
 import de.maxhenkel.pipez.blocks.tileentity.PipeLogicTileEntity;
 import de.maxhenkel.pipez.blocks.tileentity.types.FluidPipeType;
@@ -11,40 +11,33 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Inject at TAIL of tick to add retrieve logic.
+ * Original extract logic is already skipped for retrieve-mode sides via PipeLogicTileEntityMixin.
+ * We use IRetrieveShouldWork to check if redstone allows operation.
+ */
 @Mixin(FluidPipeType.class)
 public abstract class FluidPipeTypeMixin {
     
-    @Inject(method = "tick", at = @At("HEAD"), cancellable = true, remap = false)
-    private void pipezretriever$tick(PipeLogicTileEntity tileEntity, CallbackInfo ci) {
-        PipezRetriever.LOGGER.info("[FLUID Mixin] tick() called at pos {}", tileEntity.getBlockPos());
-        
+    @Inject(method = "tick", at = @At("TAIL"), remap = false)
+    private void pipezretriever$tickRetrieve(PipeLogicTileEntity tileEntity, CallbackInfo ci) {
         if (!(tileEntity instanceof IRetrieveMode retrieveMode)) {
-            PipezRetriever.LOGGER.info("[FLUID Mixin] tileEntity is NOT IRetrieveMode, letting original handle");
             return;
         }
-        
-        PipezRetriever.LOGGER.info("[FLUID Mixin] tileEntity IS IRetrieveMode");
-        
-        boolean hasRetrieveMode = false;
-        for (Direction side : Direction.values()) {
-            if (tileEntity.isExtracting(side)) {
-                boolean isRetrieving = retrieveMode.isRetrieving(side);
-                PipezRetriever.LOGGER.info("[FLUID Mixin] Side {} - extracting=true, retrieving={}", side, isRetrieving);
-                if (isRetrieving) {
-                    hasRetrieveMode = true;
-                }
-            }
-        }
-        
-        if (!hasRetrieveMode) {
-            PipezRetriever.LOGGER.info("[FLUID Mixin] No retrieve mode on any side, letting original handle");
+        if (!(tileEntity instanceof IRetrieveShouldWork shouldWork)) {
             return;
         }
-        
-        PipezRetriever.LOGGER.info("[FLUID Mixin] RETRIEVE MODE ACTIVE - handling with RetrieveHelper");
         
         FluidPipeType pipeType = (FluidPipeType) (Object) this;
-        RetrieveHelper.tickFluidPipeWithRetrieve(pipeType, tileEntity, retrieveMode);
-        ci.cancel();
+        
+        for (Direction side : Direction.values()) {
+            if (!tileEntity.isExtracting(side)) continue;
+            if (!retrieveMode.isRetrieving(side)) continue;
+            
+            // Use the stored result from shouldWork (includes redstone check)
+            if (!shouldWork.pipezretriever$shouldRetrieve(side)) continue;
+            
+            RetrieveHelper.retrieveFluids(pipeType, tileEntity, side);
+        }
     }
 }

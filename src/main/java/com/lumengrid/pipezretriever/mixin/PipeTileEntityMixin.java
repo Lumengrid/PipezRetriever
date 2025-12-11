@@ -29,19 +29,14 @@ public abstract class PipeTileEntityMixin extends BlockEntity implements IRetrie
     }
     
     @Override
-    public boolean pipezretriever$isRetrieving(Direction side) {
+    public boolean isRetrieving(Direction side) {
         return pipezretriever$retrievingSides[side.get3DDataValue()];
     }
     
     @Override
-    public void pipezretriever$setRetrieving(Direction side, boolean retrieving) {
+    public void setRetrieving(Direction side, boolean retrieving) {
         pipezretriever$retrievingSides[side.get3DDataValue()] = retrieving;
         setChanged();
-    }
-    
-    @Override
-    public boolean[] pipezretriever$getRetrievingSides() {
-        return pipezretriever$retrievingSides;
     }
     
     @Inject(method = "loadAdditional", at = @At("TAIL"), remap = true)

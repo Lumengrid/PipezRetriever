@@ -43,12 +43,10 @@ public record ToggleRetrieveModeMessage(int index) implements CustomPacketPayloa
             if (!(pipe instanceof IRetrieveMode retrieveMode)) {
                 return;
             }
-            
-            // Toggle retrieve mode for the current side
-            boolean currentState = retrieveMode.pipezretriever$isRetrieving(extractContainer.getSide());
-            retrieveMode.pipezretriever$setRetrieving(extractContainer.getSide(), !currentState);
-            
-            // Sync to client
+
+            boolean currentState = retrieveMode.isRetrieving(extractContainer.getSide());
+            retrieveMode.setRetrieving(extractContainer.getSide(), !currentState);
+
             pipe.syncData(player);
         });
     }

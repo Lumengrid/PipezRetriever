@@ -26,7 +26,7 @@ public abstract class EnergyPipeTypeMixin {
         }
         
         // Only intercept if in retrieve mode
-        if (!retrieveMode.pipezretriever$isRetrieving(side)) {
+        if (!retrieveMode.isRetrieving(side)) {
             return; // Let original pipez code handle normal mode
         }
         

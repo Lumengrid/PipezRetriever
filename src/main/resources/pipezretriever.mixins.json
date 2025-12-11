@@ -9,6 +9,7 @@
   "mixins": [
     "PipeTileEntityMixin",
     "UpgradeTileEntityMixin",
+    "PipeLogicTileEntityMixin",
     "ItemPipeTypeMixin",
     "FluidPipeTypeMixin",
     "EnergyPipeTypeMixin",

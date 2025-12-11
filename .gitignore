@@ -1,5 +1,6 @@
 # eclipse
-bin
+/bin/
+bin/
 *.launch
 .settings
 .metadata
@@ -7,29 +8,28 @@ bin
 .project
 
 # vscode
-/.vscode
+/.vscode/
 
 # idea
-out
+/out/
 *.ipr
 *.iws
 *.iml
-.idea
+/.idea/
 
 # gradle
-build
-.gradle
+/build/
+build/
+/.gradle/
+.gradle/
 /src/generated/resources/.cache
 
 # other
 eclipse
-run
-/runs
-runs
-run-data
-
-repo
-
+/run/
+run/
 /runs/
-/build/
-/.gradle/
+runs/
+run-data/
+
+/repo/

@@ -50,11 +50,8 @@ public class RetrieveHelper {
         
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof IRetrieveMode retrieveMode) {
-            // Check if this pipe is extracting on the side facing us and is in retrieve mode
             if (be instanceof PipeTileEntity pipe) {
-                if (pipe.isExtracting(side) && retrieveMode.isRetrieving(side)) {
-                    return true;
-                }
+                return pipe.isExtracting(side) && retrieveMode.isRetrieving(side);
             }
         }
         return false;
@@ -64,6 +61,8 @@ public class RetrieveHelper {
      * Handle item pipe tick with retrieve mode support
      */
     public static void tickItemPipeWithRetrieve(ItemPipeType pipeType, PipeLogicTileEntity tileEntity, IRetrieveMode retrieveMode) {
+        PipezRetriever.LOGGER.info("[ITEM Helper] tickItemPipeWithRetrieve called at pos {}", tileEntity.getBlockPos());
+        
         for (Direction side : Direction.values()) {
             int speed = pipeType.getSpeed(tileEntity.getUpgrade(side));
             if (tileEntity.getLevel().getGameTime() % speed != 0) {
@@ -73,11 +72,13 @@ public class RetrieveHelper {
                 continue;
             }
             if (!tileEntity.shouldWork(side, pipeType)) {
+                PipezRetriever.LOGGER.info("[ITEM Helper] Side {} shouldWork=false (redstone?)", side);
                 continue;
             }
             
             PipeTileEntity.Connection extractingConnection = tileEntity.getExtractingConnection(side);
             if (extractingConnection == null) {
+                PipezRetriever.LOGGER.info("[ITEM Helper] Side {} has no extracting connection", side);
                 continue;
             }
             
@@ -87,6 +88,7 @@ public class RetrieveHelper {
                     extractingConnection.getDirection()
             );
             if (extractingHandler == null) {
+                PipezRetriever.LOGGER.info("[ITEM Helper] Side {} extracting handler is null", side);
                 continue;
             }
 
@@ -96,8 +98,13 @@ public class RetrieveHelper {
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             UpgradeTileEntity.Distribution distribution = tileEntity.getDistribution(side, pipeType);
             
-            if (retrieveMode.isRetrieving(side)) {
+            boolean isRetrieving = retrieveMode.isRetrieving(side);
+            PipezRetriever.LOGGER.info("[ITEM Helper] Side {}: isRetrieving={}, connections={}, rate={}, distribution={}", 
+                side, isRetrieving, connections.size(), rate, distribution);
+            
+            if (isRetrieving) {
                 // RETRIEVE MODE: Pull FROM connections INTO the extracting handler
+                PipezRetriever.LOGGER.info("[ITEM Helper] Side {} RETRIEVE MODE - pulling from connections", side);
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     retrieveItemsRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);
                 } else {
@@ -105,6 +112,7 @@ public class RetrieveHelper {
                 }
             } else {
                 // NORMAL MODE: Push FROM extracting handler TO connections
+                PipezRetriever.LOGGER.info("[ITEM Helper] Side {} NORMAL MODE - pushing to connections", side);
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     insertItemsRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);
                 } else {
@@ -161,12 +169,17 @@ public class RetrieveHelper {
                                               List<PipeTileEntity.Connection> connections, IItemHandler destination,
                                               int rate, List<Filter<?, ?>> filters, UpgradeTileEntity.FilterMode filterMode) {
         int itemsToTransfer = rate;
+        PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Starting ordered retrieve, rate={}", rate);
         
         for (PipeTileEntity.Connection connection : connections) {
             if (itemsToTransfer <= 0) break;
             
+            PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Checking connection: pos={}, dir={}", 
+                connection.getPos(), connection.getDirection());
+            
             // Skip connections that are pipes in retrieve mode
             if (isConnectionInRetrieveMode(tileEntity.getLevel(), connection)) {
+                PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Skipping - connection is in retrieve mode");
                 continue;
             }
             
@@ -175,11 +188,18 @@ public class RetrieveHelper {
                     connection.getPos(),
                     connection.getDirection()
             );
-            if (source == null) continue;
+            if (source == null) {
+                PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Skipping - no item handler");
+                continue;
+            }
             
+            PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Source has {} slots", source.getSlots());
             int moved = transferItems(source, destination, itemsToTransfer, filters, filterMode);
+            PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Transferred {} items", moved);
             itemsToTransfer -= moved;
         }
+        
+        PipezRetriever.LOGGER.info("[ITEM RETRIEVE] Finished, remaining quota: {}", itemsToTransfer);
     }
 
     private static void insertItemsRoundRobin(PipeLogicTileEntity tileEntity, Direction side, ItemPipeType pipeType,
@@ -289,16 +309,20 @@ public class RetrieveHelper {
      * Handle fluid pipe tick with retrieve mode support
      */
     public static void tickFluidPipeWithRetrieve(FluidPipeType pipeType, PipeLogicTileEntity tileEntity, IRetrieveMode retrieveMode) {
+        PipezRetriever.LOGGER.info("[FLUID Helper] tickFluidPipeWithRetrieve called at pos {}", tileEntity.getBlockPos());
+        
         for (Direction side : Direction.values()) {
             if (!tileEntity.isExtracting(side)) {
                 continue;
             }
             if (!tileEntity.shouldWork(side, pipeType)) {
+                PipezRetriever.LOGGER.info("[FLUID Helper] Side {} shouldWork=false (redstone?)", side);
                 continue;
             }
             
             PipeTileEntity.Connection extractingConnection = tileEntity.getExtractingConnection(side);
             if (extractingConnection == null) {
+                PipezRetriever.LOGGER.info("[FLUID Helper] Side {} has no extracting connection", side);
                 continue;
             }
             
@@ -308,6 +332,7 @@ public class RetrieveHelper {
                     extractingConnection.getDirection()
             );
             if (extractingHandler == null) {
+                PipezRetriever.LOGGER.info("[FLUID Helper] Side {} extracting handler is null", side);
                 continue;
             }
 
@@ -316,9 +341,15 @@ public class RetrieveHelper {
             List<Filter<?, ?>> filters = tileEntity.getFilters(side, pipeType);
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             
-            if (retrieveMode.isRetrieving(side)) {
+            boolean isRetrieving = retrieveMode.isRetrieving(side);
+            PipezRetriever.LOGGER.info("[FLUID Helper] Side {}: isRetrieving={}, connections={}, rate={}", 
+                side, isRetrieving, connections.size(), rate);
+            
+            if (isRetrieving) {
+                PipezRetriever.LOGGER.info("[FLUID Helper] Side {} RETRIEVE MODE - pulling fluids from connections", side);
                 retrieveFluids(tileEntity, connections, extractingHandler, rate, filters, filterMode);
             } else {
+                PipezRetriever.LOGGER.info("[FLUID Helper] Side {} NORMAL MODE - pushing fluids to connections", side);
                 insertFluids(tileEntity, connections, extractingHandler, rate, filters, filterMode);
             }
         }
@@ -328,12 +359,17 @@ public class RetrieveHelper {
                                        IFluidHandler destination, int rate, List<Filter<?, ?>> filters,
                                        UpgradeTileEntity.FilterMode filterMode) {
         int mbToTransfer = rate;
+        PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Starting retrieve, rate={}", rate);
         
         for (PipeTileEntity.Connection connection : connections) {
             if (mbToTransfer <= 0) break;
             
+            PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Checking connection: pos={}, dir={}", 
+                connection.getPos(), connection.getDirection());
+            
             // Skip connections that are pipes in retrieve mode
             if (isConnectionInRetrieveMode(tileEntity.getLevel(), connection)) {
+                PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Skipping - connection is in retrieve mode");
                 continue;
             }
             
@@ -342,21 +378,37 @@ public class RetrieveHelper {
                     connection.getPos(),
                     connection.getDirection()
             );
-            if (source == null) continue;
+            if (source == null) {
+                PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Skipping - no fluid handler");
+                continue;
+            }
             
             FluidStack drained = source.drain(mbToTransfer, IFluidHandler.FluidAction.SIMULATE);
-            if (drained.isEmpty()) continue;
+            if (drained.isEmpty()) {
+                PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Skipping - source is empty");
+                continue;
+            }
+            
+            PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Source has {} mB of {}", drained.getAmount(), drained.getFluid());
             
             // Check filter
-            if (!canTransferFluid(drained, filters, filterMode)) continue;
+            if (!canTransferFluid(drained, filters, filterMode)) {
+                PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Skipping - filtered out");
+                continue;
+            }
             
             int filled = destination.fill(drained, IFluidHandler.FluidAction.SIMULATE);
+            PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Destination can accept {} mB", filled);
+            
             if (filled > 0) {
                 FluidStack toDrain = source.drain(filled, IFluidHandler.FluidAction.EXECUTE);
                 destination.fill(toDrain, IFluidHandler.FluidAction.EXECUTE);
+                PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Actually transferred {} mB", filled);
                 mbToTransfer -= filled;
             }
         }
+        
+        PipezRetriever.LOGGER.info("[FLUID RETRIEVE] Finished, remaining quota: {} mB", mbToTransfer);
     }
 
     private static void insertFluids(PipeLogicTileEntity tileEntity, List<PipeTileEntity.Connection> connections,
@@ -765,7 +817,10 @@ public class RetrieveHelper {
      * This handles Mekanism chemicals.
      */
     public static void tickGasPipeWithRetrieve(GasPipeType pipeType, PipeLogicTileEntity tileEntity, IRetrieveMode retrieveMode) {
+        PipezRetriever.LOGGER.info("[GAS Helper] tickGasPipeWithRetrieve called at pos {}", tileEntity.getBlockPos());
+        
         if (!MekanismUtils.isMekanismInstalled()) {
+            PipezRetriever.LOGGER.info("[GAS Helper] Mekanism not installed, skipping");
             return;
         }
         
@@ -774,16 +829,19 @@ public class RetrieveHelper {
                 continue;
             }
             if (!tileEntity.shouldWork(side, pipeType)) {
+                PipezRetriever.LOGGER.info("[GAS Helper] Side {} shouldWork=false (redstone?)", side);
                 continue;
             }
             
             PipeTileEntity.Connection extractingConnection = tileEntity.getExtractingConnection(side);
             if (extractingConnection == null) {
+                PipezRetriever.LOGGER.info("[GAS Helper] Side {} has no extracting connection", side);
                 continue;
             }
             
             IChemicalHandler extractingHandler = extractingConnection.getChemicalHandler();
             if (extractingHandler == null) {
+                PipezRetriever.LOGGER.info("[GAS Helper] Side {} extracting handler is null", side);
                 continue;
             }
 
@@ -793,8 +851,13 @@ public class RetrieveHelper {
             UpgradeTileEntity.FilterMode filterMode = tileEntity.getFilterMode(side, pipeType);
             UpgradeTileEntity.Distribution distribution = tileEntity.getDistribution(side, pipeType);
             
-            if (retrieveMode.isRetrieving(side)) {
+            boolean isRetrieving = retrieveMode.isRetrieving(side);
+            PipezRetriever.LOGGER.info("[GAS Helper] Side {}: isRetrieving={}, connections={}, rate={}, distribution={}", 
+                side, isRetrieving, connections.size(), rate, distribution);
+            
+            if (isRetrieving) {
                 // RETRIEVE MODE: Pull FROM connections INTO the extracting handler
+                PipezRetriever.LOGGER.info("[GAS Helper] Side {} RETRIEVE MODE - pulling gas from connections", side);
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     retrieveGasRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);
                 } else {
@@ -802,6 +865,7 @@ public class RetrieveHelper {
                 }
             } else {
                 // NORMAL MODE: Push FROM extracting handler TO connections
+                PipezRetriever.LOGGER.info("[GAS Helper] Side {} NORMAL MODE - pushing gas to connections", side);
                 if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
                     insertGasRoundRobin(tileEntity, side, pipeType, connections, extractingHandler, rate, filters, filterMode);
                 } else {
@@ -854,21 +918,33 @@ public class RetrieveHelper {
                                             List<PipeTileEntity.Connection> connections, IChemicalHandler destination,
                                             long rate, List<Filter<?, ?>> filters, UpgradeTileEntity.FilterMode filterMode) {
         long mbToTransfer = rate;
+        PipezRetriever.LOGGER.info("[GAS RETRIEVE] Starting ordered retrieve, rate={}", rate);
         
         for (PipeTileEntity.Connection connection : connections) {
             if (mbToTransfer <= 0) break;
             
+            PipezRetriever.LOGGER.info("[GAS RETRIEVE] Checking connection: pos={}, dir={}", 
+                connection.getPos(), connection.getDirection());
+            
             // Skip connections that are pipes in retrieve mode
             if (isConnectionInRetrieveMode(tileEntity.getLevel(), connection)) {
+                PipezRetriever.LOGGER.info("[GAS RETRIEVE] Skipping - connection is in retrieve mode");
                 continue;
             }
             
             IChemicalHandler source = connection.getChemicalHandler();
-            if (source == null) continue;
+            if (source == null) {
+                PipezRetriever.LOGGER.info("[GAS RETRIEVE] Skipping - no chemical handler");
+                continue;
+            }
             
+            PipezRetriever.LOGGER.info("[GAS RETRIEVE] Source has {} tanks", source.getChemicalTanks());
             long moved = transferGas(source, destination, mbToTransfer, filters, filterMode);
+            PipezRetriever.LOGGER.info("[GAS RETRIEVE] Transferred {} mB", moved);
             mbToTransfer -= moved;
         }
+        
+        PipezRetriever.LOGGER.info("[GAS RETRIEVE] Finished, remaining quota: {} mB", mbToTransfer);
     }
 
     private static void insertGasRoundRobin(PipeLogicTileEntity tileEntity, Direction side, GasPipeType pipeType,

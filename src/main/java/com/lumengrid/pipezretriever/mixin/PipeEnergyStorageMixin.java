@@ -32,20 +32,25 @@ public abstract class PipeEnergyStorageMixin {
      */
     @Inject(method = "tick", at = @At("HEAD"), cancellable = true, remap = false)
     private void pipezretriever$tick(CallbackInfo ci) {
-        PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 1 side {}", side);
+        PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] tick() called at pos {}, side {}", pipe.getBlockPos(), side);
+        
         if (!(pipe instanceof IRetrieveMode retrieveMode)) {
-            PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 2 side {}", side);
+            PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] pipe is NOT IRetrieveMode, letting original handle");
             return; // Let original handle it
         }
         
+        PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] pipe IS IRetrieveMode");
+        
         // Only intercept if in retrieve mode
-        PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 3 side {}", side);
-        if (!retrieveMode.isRetrieving(side)) {
-            PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() 4 side {}", side);
+        boolean isRetrieving = retrieveMode.isRetrieving(side);
+        PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] Side {} - isRetrieving={}", side, isRetrieving);
+        
+        if (!isRetrieving) {
+            PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] Not in retrieve mode, letting original handle");
             return; // Let original handle normal mode
         }
         
-        PipezRetriever.LOGGER.info("[Energy] PipeEnergyStorage.tick() - RETRIEVE MODE active for side {}", side);
+        PipezRetriever.LOGGER.info("[ENERGY STORAGE Mixin] RETRIEVE MODE ACTIVE - handling with RetrieveHelper");
         
         // In retrieve mode: always call our retrieve logic, ignoring lastReceived
         RetrieveHelper.pullEnergyWithRetrieve(EnergyPipeType.INSTANCE, pipe, side);

@@ -1,0 +1,61 @@
+--- a/net/minecraft/world/item/enchantment/Enchantment.java
++++ b/net/minecraft/world/item/enchantment/Enchantment.java
+@@ -124,6 +124,10 @@
+         return map;
+     }
+ 
++    /**
++     * @deprecated Neo: Use {@link ItemStack#supportsEnchantment(Holder)}
++     */
++    @Deprecated
+     public HolderSet<Item> getSupportedItems() {
+         return this.definition.supportedItems();
+     }
+@@ -132,10 +136,20 @@
+         return this.definition.slots().stream().anyMatch(p_345027_ -> p_345027_.test(p_345146_));
+     }
+ 
++    /**
++     * @deprecated Neo: Use {@link ItemStack#isPrimaryItemFor(Holder)}
++     *
++     * This method does not respect {@link ItemStack#supportsEnchantment(Holder)} since the {@link Holder} is not available, which makes the result of calling it invalid.
++     */
++    @Deprecated
+     public boolean isPrimaryItem(ItemStack p_336088_) {
+         return this.isSupportedItem(p_336088_) && (this.definition.primaryItems.isEmpty() || p_336088_.is(this.definition.primaryItems.get()));
+     }
+ 
++    /**
++     * @deprecated Neo: Use {@link ItemStack#supportsEnchantment(Holder)}
++     */
++    @Deprecated
+     public boolean isSupportedItem(ItemStack p_344865_) {
+         return p_344865_.is(this.definition.supportedItems);
+     }
+@@ -188,6 +202,10 @@
+         return mutablecomponent;
+     }
+ 
++    /**
++     * @deprecated Neo: Use {@link ItemStack#supportsEnchantment(Holder)}
++     */
++    @Deprecated
+     public boolean canEnchant(ItemStack p_44689_) {
+         return this.definition.supportedItems().contains(p_44689_.getItemHolder());
+     }
+@@ -503,6 +521,15 @@
+     public static Enchantment.Builder enchantment(Enchantment.EnchantmentDefinition p_345873_) {
+         return new Enchantment.Builder(p_345873_);
+     }
++
++//    TODO: Reimplement. Not sure if we want to patch EnchantmentDefinition or hack this in as an EnchantmentEffectComponent.
++//    /**
++//     * Is this enchantment allowed to be enchanted on books via Enchantment Table
++//     * @return false to disable the vanilla feature
++//     */
++//    public boolean isAllowedOnBooks() {
++//        return true;
++//    }
+ 
+     public static class Builder {
+         private final Enchantment.EnchantmentDefinition definition;

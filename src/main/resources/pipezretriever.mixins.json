@@ -10,9 +10,9 @@
     "PipeTileEntityMixin",
     "UpgradeTileEntityMixin",
     "PipeLogicTileEntityMixin",
+    "EnergyPipeTypeMixin",
     "ItemPipeTypeMixin",
     "FluidPipeTypeMixin",
-    "EnergyPipeTypeMixin",
     "GasPipeTypeMixin",
     "PipeEnergyStorageMixin"
   ],

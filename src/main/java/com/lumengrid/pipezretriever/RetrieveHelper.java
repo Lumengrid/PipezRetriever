@@ -1,5 +1,6 @@
 package com.lumengrid.pipezretriever;
 
+import com.lumengrid.pipezretriever.PipezRetriever;
 import de.maxhenkel.pipez.Filter;
 import de.maxhenkel.pipez.blocks.tileentity.PipeLogicTileEntity;
 import de.maxhenkel.pipez.blocks.tileentity.PipeTileEntity;
@@ -8,6 +9,7 @@ import de.maxhenkel.pipez.blocks.tileentity.types.EnergyPipeType;
 import de.maxhenkel.pipez.blocks.tileentity.types.FluidPipeType;
 import de.maxhenkel.pipez.blocks.tileentity.types.GasPipeType;
 import de.maxhenkel.pipez.blocks.tileentity.types.ItemPipeType;
+import de.maxhenkel.pipez.blocks.tileentity.types.PipeType;
 import mekanism.api.Action;
 import mekanism.api.chemical.Chemical;
 import mekanism.api.chemical.ChemicalStack;
@@ -26,6 +28,7 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemHandlerHelper;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +37,22 @@ import java.util.stream.Collectors;
  * Retrieve mode pulls FROM connected inventories INTO the extracting side's inventory.
  */
 public class RetrieveHelper {
+
+    /**
+     * Check redstone mode for a side.
+     * This replicates the redstone check that shouldWork normally does.
+     */
+    public static boolean checkRedstone(PipeLogicTileEntity tileEntity, Direction side, PipeType<?, ?> pipeType) {
+        UpgradeTileEntity.RedstoneMode redstoneMode = tileEntity.getRedstoneMode(side, pipeType);
+        boolean hasPower = tileEntity.isRedstonePowered();
+        
+        return switch (redstoneMode) {
+            case IGNORED -> true;
+            case OFF_WHEN_POWERED -> !hasPower;
+            case ON_WHEN_POWERED -> hasPower;
+            case ALWAYS_OFF -> false;
+        };
+    }
 
     /**
      * Check if a connection is a pipe that's also in retrieve mode.
@@ -248,21 +267,45 @@ public class RetrieveHelper {
     // ==================== ENERGY RETRIEVE ====================
 
     public static void retrieveEnergy(EnergyPipeType pipeType, PipeLogicTileEntity tileEntity, Direction side) {
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Starting for side {}", side);
+        
         PipeTileEntity.Connection extractingConnection = tileEntity.getExtractingConnection(side);
-        if (extractingConnection == null) return;
+        if (extractingConnection == null) {
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] No extracting connection");
+            return;
+        }
+        
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Extracting connection: pos={}, dir={}", 
+            extractingConnection.getPos(), extractingConnection.getDirection());
         
         // Destination = where we push energy TO (the machine on the extracting side)
         IEnergyStorage destination = extractingConnection.getEnergyHandler();
-        if (destination == null) return;
+        if (destination == null) {
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Destination is null");
+            return;
+        }
+        
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Destination: canReceive={}, stored={}/{}", 
+            destination.canReceive(), destination.getEnergyStored(), destination.getMaxEnergyStored());
         
         int testReceive = destination.receiveEnergy(1, true);
-        if (!destination.canReceive() && testReceive <= 0) return;
+        if (!destination.canReceive() && testReceive <= 0) {
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Destination cannot receive");
+            return;
+        }
 
         List<PipeTileEntity.Connection> connections = tileEntity.getSortedConnections(side, pipeType);
-        if (connections.isEmpty()) return;
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Found {} connections", connections.size());
+        
+        if (connections.isEmpty()) {
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] No connections");
+            return;
+        }
         
         int rate = pipeType.getRate(tileEntity.getUpgrade(side));
         UpgradeTileEntity.Distribution distribution = tileEntity.getDistribution(side, pipeType);
+        
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE] Rate={}, Distribution={}", rate, distribution);
         
         if (distribution == UpgradeTileEntity.Distribution.ROUND_ROBIN) {
             retrieveEnergyRoundRobin(tileEntity, side, pipeType, connections, destination, rate);
@@ -278,7 +321,7 @@ public class RetrieveHelper {
         int energyToTransfer = rate;
         int p = tileEntity.getRoundRobinIndex(side, pipeType) % connections.size();
         
-        java.util.List<IEnergyStorage> sources = new java.util.ArrayList<>();
+        List<IEnergyStorage> sources = new ArrayList<>();
         for (int i = 0; i < connections.size(); i++) {
             int index = (i + p) % connections.size();
             PipeTileEntity.Connection connection = connections.get(index);
@@ -310,34 +353,68 @@ public class RetrieveHelper {
     private static void retrieveEnergyOrdered(PipeLogicTileEntity tileEntity, List<PipeTileEntity.Connection> connections,
                                                IEnergyStorage destination, int rate) {
         int energyToTransfer = rate;
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Starting with rate={}", rate);
         
         for (PipeTileEntity.Connection connection : connections) {
             if (energyToTransfer <= 0) break;
-            if (isConnectionInRetrieveMode(tileEntity.getLevel(), connection)) continue;
+            
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Checking connection pos={}, dir={}", 
+                connection.getPos(), connection.getDirection());
+            
+            if (isConnectionInRetrieveMode(tileEntity.getLevel(), connection)) {
+                PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Skipping - in retrieve mode");
+                continue;
+            }
             
             IEnergyStorage source = connection.getEnergyHandler();
-            if (source == null) continue;
-            if (source.getEnergyStored() <= 0) continue;
+            if (source == null) {
+                PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Skipping - no energy handler");
+                continue;
+            }
+            
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Source: canExtract={}, stored={}/{}", 
+                source.canExtract(), source.getEnergyStored(), source.getMaxEnergyStored());
+            
+            if (source.getEnergyStored() <= 0) {
+                PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Skipping - no energy stored");
+                continue;
+            }
             
             int testExtract = source.extractEnergy(1, true);
-            if (!source.canExtract() && testExtract <= 0) continue;
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] testExtract={}", testExtract);
+            
+            if (!source.canExtract() && testExtract <= 0) {
+                PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Skipping - cannot extract");
+                continue;
+            }
             
             int simulatedExtract = source.extractEnergy(energyToTransfer, true);
+            PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] simulatedExtract={}", simulatedExtract);
+            
             if (simulatedExtract > 0) {
                 int transferred = pushEnergy(source, destination, simulatedExtract);
+                PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Transferred {} FE", transferred);
                 energyToTransfer -= transferred;
             }
         }
+        
+        PipezRetriever.LOGGER.info("[ENERGY RETRIEVE ORDERED] Done, remaining={}", energyToTransfer);
     }
 
     private static int pushEnergy(IEnergyStorage source, IEnergyStorage destination, int maxAmount) {
+        PipezRetriever.LOGGER.info("[pushEnergy] maxAmount={}", maxAmount);
+        
         int canReceive = destination.receiveEnergy(maxAmount, true);
+        PipezRetriever.LOGGER.info("[pushEnergy] canReceive={}", canReceive);
         if (canReceive <= 0) return 0;
         
         int extracted = source.extractEnergy(canReceive, false);
+        PipezRetriever.LOGGER.info("[pushEnergy] extracted={}", extracted);
         if (extracted <= 0) return 0;
         
-        return destination.receiveEnergy(extracted, false);
+        int received = destination.receiveEnergy(extracted, false);
+        PipezRetriever.LOGGER.info("[pushEnergy] received={}", received);
+        return received;
     }
 
     // ==================== GAS/CHEMICAL RETRIEVE ====================

@@ -1,22 +1,25 @@
 package com.lumengrid.pipezretriever.mixin;
 
 import com.lumengrid.pipezretriever.IRetrieveMode;
+import de.maxhenkel.pipez.corelib.codec.ValueInputOutputUtils;
 import de.maxhenkel.pipez.blocks.tileentity.PipeTileEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.ByteTag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Optional;
 
 @Mixin(PipeTileEntity.class)
 public abstract class PipeTileEntityMixin extends BlockEntity implements IRetrieveMode {
@@ -40,24 +43,30 @@ public abstract class PipeTileEntityMixin extends BlockEntity implements IRetrie
     }
     
     @Inject(method = "loadAdditional", at = @At("TAIL"), remap = true)
-    private void pipezretriever$loadAdditional(CompoundTag tag, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void pipezretriever$loadAdditional(ValueInput valueInput, CallbackInfo ci) {
         pipezretriever$retrievingSides = new boolean[Direction.values().length];
-        if (tag.contains("PipezRetriever_RetrievingSides", Tag.TAG_LIST)) {
-            ListTag retrievingList = tag.getList("PipezRetriever_RetrievingSides", Tag.TAG_BYTE);
-            if (retrievingList.size() >= pipezretriever$retrievingSides.length) {
+        CompoundTag tag = ValueInputOutputUtils.getTag(valueInput);
+        Optional<ListTag> retrievingList = tag.getList("PipezRetriever_RetrievingSides");
+        if (retrievingList.isPresent()) {
+            if (retrievingList.get().size() >= pipezretriever$retrievingSides.length) {
                 for (int i = 0; i < pipezretriever$retrievingSides.length; i++) {
-                    pipezretriever$retrievingSides[i] = ((ByteTag) retrievingList.get(i)).getAsByte() != 0;
+                    Optional<Byte> optionalByte = retrievingList.get().get(i).asByte();
+                    if (optionalByte.isPresent()) {
+                        pipezretriever$retrievingSides[i] = optionalByte.get() != (byte) 0;
+                    }
                 }
             }
         }
     }
     
     @Inject(method = "saveAdditional", at = @At("TAIL"), remap = true)
-    private void pipezretriever$saveAdditional(CompoundTag tag, HolderLookup.Provider registries, CallbackInfo ci) {
+    private void pipezretriever$saveAdditional(ValueOutput valueOutput, CallbackInfo ci) {
+        CompoundTag tag = new CompoundTag();
         ListTag retrievingList = new ListTag();
         for (boolean retrieving : pipezretriever$retrievingSides) {
             retrievingList.add(ByteTag.valueOf(retrieving));
         }
         tag.put("PipezRetriever_RetrievingSides", retrievingList);
+        valueOutput.store(tag);
     }
 }

@@ -8,7 +8,7 @@ import de.maxhenkel.pipez.gui.ExtractScreen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,7 +21,6 @@ public abstract class ExtractScreenMixin extends AbstractContainerScreen<Extract
     @Unique
     private Button modeButton;
     
-    // Constructor required by mixin extending a class
     protected ExtractScreenMixin() {
         super(null, null, null);
     }
@@ -34,7 +33,7 @@ public abstract class ExtractScreenMixin extends AbstractContainerScreen<Extract
         modeButton = Button.builder(
                 getButtonText(pipe, container),
                 button -> {
-                    PacketDistributor.sendToServer(new ToggleRetrieveModeMessage(0));
+                    ClientPacketDistributor.sendToServer(new ToggleRetrieveModeMessage(0));
                 }
         ).bounds(this.leftPos + 32, this.topPos - 22, 60, 20).build();
         
@@ -57,7 +56,6 @@ public abstract class ExtractScreenMixin extends AbstractContainerScreen<Extract
         PipeLogicTileEntity pipe = container.getPipe();
         modeButton.active = true;
         
-        // Update button text and tooltip based on current state
         modeButton.setMessage(getButtonText(pipe, container));
     }
     

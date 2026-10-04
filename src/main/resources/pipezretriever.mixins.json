@@ -13,7 +13,6 @@
     "EnergyPipeTypeMixin",
     "ItemPipeTypeMixin",
     "FluidPipeTypeMixin",
-    "GasPipeTypeMixin",
     "PipeEnergyStorageMixin"
   ],
   "injectors": {
